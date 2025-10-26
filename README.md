@@ -6,11 +6,17 @@ This is useful when you have a JSON payload where some fields are known, but oth
 
 ## Features
 
--   Unmarshal unknown fields into maps based on filters.
--   Supports matching dynamic keys by:
-    -   `prefix`
-    -   `contains`
-    -   `suffix`
+- Unmarshal unknown fields into maps based on filters.
+- Supports matching dynamic keys by:
+  - `prefix`
+  - `contains`
+  - `suffix`
+
+## WIP Features
+
+- Regex matching support
+- QOL changes
+- Different key types
 
 ## Installation
 
