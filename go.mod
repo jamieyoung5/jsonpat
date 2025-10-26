@@ -1,4 +1,4 @@
-module jsonpat
+module github.com/jamieyoung5/jsonpat
 
 go 1.24
 
