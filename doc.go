@@ -1,5 +1,5 @@
 /*
-Package dynjson provides a custom JSON unmarshaler for Go.
+Package jsonpat provides a custom JSON unmarshaler for Go.
 It extends the standard `encoding/json` package to support unmarshaling
 JSON objects with dynamic keys (keys not explicitly defined in the struct)
 into maps within the struct.
@@ -10,8 +10,8 @@ should be collected into a map.
 
 # Tag Format
 
-The package introduces the `dynamic_json` struct tag.
-Its format is: `dynamic_json:"<value>,<type>"`
+The package introduces the `jsonpat` struct tag.
+Its format is: `jsonpat:"<value>,<type>"`
 
 - <value>: The string value to match against the JSON key (e.g., "dyn_", "_suffix").
 - <type>:  The matching logic to use. Must be one of:
@@ -28,8 +28,8 @@ Given a struct:
 
 	type MyData struct {
 		KnownField      string            `json:"known_field"`
-		DynamicByPrefix map[string]int    `dynamic_json:"dyn_,prefix"`
-		DynamicBySuffix map[string]string `dynamic_json:"_id,suffix"`
+		DynamicByPrefix map[string]int    `jsonpat:"dyn_,prefix"`
+		DynamicBySuffix map[string]string `jsonpat:"_id,suffix"`
 	}
 
 And JSON data:
@@ -45,7 +45,7 @@ And JSON data:
 Unmarshaling:
 
 	var data MyData
-	err := dynjson.UnmarshalDynJson(jsonData, &data)
+	err := jsonpat.UnmarshalJson(jsonData, &data)
 	if err != nil {
 		// handle error
 	}
@@ -56,4 +56,4 @@ Unmarshaling:
 	// data.DynamicBySuffix["user_id"] == "u-1"
 	// data.DynamicBySuffix["item_id"] == "i-9"
 */
-package dynjson
+package jsonpat

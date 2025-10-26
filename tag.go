@@ -1,4 +1,4 @@
-package dynjson
+package jsonpat
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	dynamicTag          = "dynamic_json"
+	dynamicTag          = "jsonpat"
 	dynamicTagSeperator = ","
 
 	prefixType   = "prefix"

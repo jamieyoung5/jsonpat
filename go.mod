@@ -1,4 +1,4 @@
-module dynjson
+module jsonpat
 
 go 1.24
 

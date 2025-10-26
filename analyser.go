@@ -1,4 +1,4 @@
-package dynjson
+package jsonpat
 
 import (
 	"reflect"

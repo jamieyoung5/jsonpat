@@ -1,4 +1,4 @@
-package dynjson
+package jsonpat
 
 import (
 	"encoding/json"
@@ -7,12 +7,12 @@ import (
 	"strings"
 )
 
-// UnmarshalDynJson parses json data into a struct, supporting `dynamic_json` tags
+// UnmarshalJson parses json data into a struct, supporting `jsonpat` tags
 // while preserving existing `json` tagging functionality. Dynamic json tags allow
 // for filtered matching of json keys into a struct field.
 //
 // The 'v' argument must be a non-nil pointer to a struct.
-func UnmarshalDynJson(data []byte, v interface{}) error {
+func UnmarshalJson(data []byte, v interface{}) error {
 	// validata struct pointer
 	ptrVal := reflect.ValueOf(v)
 	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {

@@ -1,8 +1,8 @@
-# dynjson
+# jsonpat
 
-`dynjson` extends the standard `encoding/json` package to support unmarshaling JSON objects with dynamic keys into maps within a struct.
+`jsonpat` extends the standard `encoding/json` package to support unmarshaling JSON objects with dynamic keys into maps within a struct.
 
-This is useful when you have a JSON payload where some fields are known, but others are dynamic and follow a predictable pattern (e.g., a common prefix, suffix, or containing substring). `dynjson` maps these dynamic keys to a `map[string]T` field in your struct.
+This is useful when you have a JSON payload where some fields are known, but others are dynamic and follow a predictable pattern (e.g., a common prefix, suffix, or containing substring). `jsonpat` maps these dynamic keys to a `map[string]T` field in your struct.
 
 ## Features
 
@@ -21,15 +21,15 @@ This is useful when you have a JSON payload where some fields are known, but oth
 ## Installation
 
 ```sh
-go get [github.com/your-username/dynjson](https://github.com/your-username/dynjson)
+go get [github.com/your-username/jsonpat](https://github.com/your-username/jsonpat)
 ```
 
 ## Usage
 
-Define your struct using both standard `json` tags and the `dynamic_json` tag.
+Define your struct using both standard `json` tags and the `jsonpat` tag.
 
-The `dynamic_json` tag format is:
-**`dynamic_json:"<value>,<type>"`**
+The `jsonpat` tag format is:
+**`jsonpat:"<value>,<type>"`**
 
 -   **`<value>`**: The string value to match against the JSON key.
 -   **`<type>`**: The matching logic. Must be one of `prefix`, `contains`, or `suffix`.
@@ -39,12 +39,12 @@ The `dynamic_json` tag format is:
 Here is the struct definition from the library's tests:
 
 ```go
-import "[github.com/your-username/dynjson](https://github.com/your-username/dynjson)"
+import "[github.com/your-username/jsonpat](https://github.com/your-username/jsonpat)"
 
 // EmbeddedStruct demonstrates support for embedded structs.
 type EmbeddedStruct struct {
 	EmbeddedField string                 `json:"embedded_field"`
-	DynamicSuffix map[string]interface{} `dynamic_json:"_suffix,suffix"`
+	DynamicSuffix map[string]interface{} `jsonpat:"_suffix,suffix"`
 }
 
 type TestStruct struct {
@@ -52,8 +52,8 @@ type TestStruct struct {
 	KnownField      string             `json:"known_field"`
 	OtherKnown      int                `json:"other"`
 	Ignored         string             `json:"-"`
-	DynamicPrefix   map[string]int     `dynamic_json:"dyn_,prefix"`
-	DynamicContains map[string]float64 `dynamic_json:"_val_,contains"`
+	DynamicPrefix   map[string]int     `jsonpat:"dyn_,prefix"`
+	DynamicContains map[string]float64 `jsonpat:"_val_,contains"`
 }
 ```
 
@@ -66,7 +66,7 @@ import (
 	"fmt"
 	"log"
 
-	"[github.com/your-username/dynjson](https://github.com/your-username/dynjson)"
+	"[github.com/your-username/jsonpat](https://github.com/your-username/jsonpat)"
 )
 
 // (Struct definitions from above)
@@ -87,7 +87,7 @@ func main() {
 	}`)
 
 	var result TestStruct
-	err := dynjson.UnmarshalDynJson(jsonData, &result)
+	err := jsonpat.UnmarshalJson(jsonData, &result)
 	if err != nil {
 		log.Fatalf("Failed to unmarshal: %v", err)
 	}
