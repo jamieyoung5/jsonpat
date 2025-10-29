@@ -21,7 +21,7 @@ This is useful when you have a JSON payload where some fields are known, but oth
 ## Installation
 
 ```sh
-go get [github.com/your-username/jsonpat](https://github.com/your-username/jsonpat)
+go get [github.com/jamieyoung5/jsonpat](https://github.com/jamieyoung5/jsonpat)
 ```
 
 ## Usage
@@ -39,7 +39,7 @@ The `jsonpat` tag format is:
 Here is the struct definition from the library's tests:
 
 ```go
-import "[github.com/your-username/jsonpat](https://github.com/your-username/jsonpat)"
+import "[github.com/jamieyoung5/jsonpat](https://github.com/jamieyoung5/jsonpat)"
 
 // EmbeddedStruct demonstrates support for embedded structs.
 type EmbeddedStruct struct {
@@ -66,7 +66,7 @@ import (
 	"fmt"
 	"log"
 
-	"[github.com/your-username/jsonpat](https://github.com/your-username/jsonpat)"
+	"[github.com/jamieyoung5/jsonpat](https://github.com/jamieyoung5/jsonpat)"
 )
 
 // (Struct definitions from above)
