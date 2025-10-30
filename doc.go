@@ -18,9 +18,16 @@ Its format is: `jsonpat:"<value>,<type>"`
   - `prefix`: Matches if the JSON key starts with <value>.
   - `contains`: Matches if the JSON key contains <value>.
   - `suffix`: Matches if the JSON key ends with <value>.
+  - `regex`: Matches if the JSON key matches <value> (which must be a valid regex pattern)
 
-Fields using this tag must be of a `map[string]T` type, where `T` is
-the type you expect the dynamic value to be.
+Fields using this tag can be one of two kinds:
+
+ 1. **Map Type (`map[string]T`):** All JSON keys that match the rule will be
+    unmarshaled into this map. The map must be initialized (or nil).
+
+ 2. **Scalar Type (e.g., `string`, `int`, `bool`):** The *first* JSON key
+    that matches the rule will have its value unmarshaled into this field.
+    Any subsequent keys matching the same rule will be ignored for this field.
 
 # Example Usage
 
@@ -29,7 +36,8 @@ Given a struct:
 	type MyData struct {
 		KnownField      string            `json:"known_field"`
 		DynamicByPrefix map[string]int    `jsonpat:"dyn_,prefix"`
-		DynamicBySuffix map[string]string `jsonpat:"_id,suffix"`
+		DynamicByRegex  map[string]string `jsonpat:"^user_\\d+$,regex"`
+		FirstScalar     string            `jsonpat:"_val,contains"`
 	}
 
 And JSON data:
@@ -38,22 +46,28 @@ And JSON data:
 		"known_field": "hello",
 		"dyn_abc": 123,
 		"dyn_xyz": 456,
-		"user_id": "u-1",
-		"item_id": "i-9"
+		"user_101": "u-1",
+		"user_102": "u-2",
+		"other_val": "first",
+		"another_val": "second"
 	}`)
 
 Unmarshaling:
 
 	var data MyData
-	err := jsonpat.UnmarshalJson(jsonData, &data)
+	err := jsonpat.Unmarshal(jsonData, &data) //
 	if err != nil {
 		// handle error
 	}
 
 	// data.KnownField == "hello"
+	//
 	// data.DynamicByPrefix["dyn_abc"] == 123
 	// data.DynamicByPrefix["dyn_xyz"] == 456
-	// data.DynamicBySuffix["user_id"] == "u-1"
-	// data.DynamicBySuffix["item_id"] == "i-9"
+	//
+	// data.DynamicByRegex["user_101"] == "u-1"
+	// data.DynamicByRegex["user_102"] == "u-2"
+	//
+	// data.FirstScalar == "first" (or "second", depending on map iteration order)
 */
 package jsonpat

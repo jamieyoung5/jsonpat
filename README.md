@@ -7,21 +7,18 @@ This is useful when you have a JSON payload where some fields are known, but oth
 ## Features
 
 - Unmarshal unknown fields into maps based on filters.
+- Supports both map fields (`map[string]T`) to capture all matching keys and scalar fields (e.g., `string`, `int`) to capture the first matching key.
 - Supports matching dynamic keys by:
   - `prefix`
   - `contains`
   - `suffix`
-
-## WIP Features
-
-- Regex matching support
-- QOL changes
-- Different key types
+  - `regex`
+- Works alongside standard `json` tags and supports embedded structs
 
 ## Installation
 
 ```sh
-go get [github.com/jamieyoung5/jsonpat](https://github.com/jamieyoung5/jsonpat)
+go get github.com/jamieyoung5/jsonpat
 ```
 
 ## Usage
@@ -31,29 +28,43 @@ Define your struct using both standard `json` tags and the `jsonpat` tag.
 The `jsonpat` tag format is:
 **`jsonpat:"<value>,<type>"`**
 
--   **`<value>`**: The string value to match against the JSON key.
--   **`<type>`**: The matching logic. Must be one of `prefix`, `contains`, or `suffix`.
+-   **`<value>`**: The string value to match (e.g, a prefix, a substring, suffix, or regex pattern).
+-   **`<type>`**: The matching logic. Must be one of `prefix`, `contains`, `suffix`, or `regex`.
+
+### Field Types
+- **Map Fields (`map[string]T`):** All JSON keys matching the rule will be unmarshaled into this map.
+
+- **Scalar Fields (e.g., `string`, `int`, `bool`):** The value of the first JSON key that matches the rule will be unmarshaled into this field. Subsequent matches for the same rule are ignored.
 
 ### Example
 
-Here is the struct definition from the library's tests:
+Here is a struct definition demonstrating various features:
 
 ```go
-import "[github.com/jamieyoung5/jsonpat](https://github.com/jamieyoung5/jsonpat)"
+import "github.com/jamieyoung5/jsonpat"
 
 // EmbeddedStruct demonstrates support for embedded structs.
 type EmbeddedStruct struct {
-	EmbeddedField string                 `json:"embedded_field"`
-	DynamicSuffix map[string]interface{} `jsonpat:"_suffix,suffix"`
+    EmbeddedField string                 `json:"embedded_field"`
+    DynamicSuffix map[string]interface{} `jsonpat:"_suffix,suffix"`
 }
 
 type TestStruct struct {
-	EmbeddedStruct
-	KnownField      string             `json:"known_field"`
-	OtherKnown      int                `json:"other"`
-	Ignored         string             `json:"-"`
-	DynamicPrefix   map[string]int     `jsonpat:"dyn_,prefix"`
-	DynamicContains map[string]float64 `jsonpat:"_val_,contains"`
+    EmbeddedStruct
+    KnownField string `json:"known_field"`
+    OtherKnown int    `json:"other"`
+    Ignored    string `json:"-"`
+    
+    // Dynamic Map Fields (Collect all matches)
+    DynamicPrefix   map[string]int     `jsonpat:"dyn_,prefix"`
+    DynamicContains map[string]float64 `jsonpat:"_val_,contains"`
+    DynamicRegex    map[string]string  `jsonpat:"^re_.*$,regex"`
+    
+    // Dynamic Scalar Fields (Collect first match)
+    ScalarPrefix   string `jsonpat:"scalar_pfx_,prefix"`
+    ScalarSuffix   string `jsonpat:"_scalar_sfx,suffix"`
+    ScalarContains int    `jsonpat:"_scalar_cont_,contains"`
+    ScalarRegex    bool   `jsonpat:"^scalar_re_\\d+$,regex"`
 }
 ```
 
@@ -63,58 +74,85 @@ Now, let's unmarshal some JSON:
 package main
 
 import (
-	"fmt"
-	"log"
+  "fmt"
+  "log"
 
-	"[github.com/jamieyoung5/jsonpat](https://github.com/jamieyoung5/jsonpat)"
+  "github.com/jamieyoung5/jsonpat"
 )
 
 // (Struct definitions from above)
 
 func main() {
-	jsonData := []byte(`{
+  jsonData := []byte(`{
 		"known_field": "hello",
 		"other": 123,
 		"ignored": "should not be Loaded",
 		"embedded_field": "i am embedded",
+
 		"dyn_abc": 1,
 		"dyn_xyz": 2,
+
 		"field_val_1": 10.5,
 		"field_val_2": 20.75,
+
 		"some_suffix": "test string",
 		"another_suffix": true,
+
+		"re_a123": "regex-A",
+		"re_b456": "regex-B",
+
+		"scalar_pfx_data": "scalar-prefix-val",
+		"other_scalar_pfx_field": "ignored, scalar already set",
+
+		"data_scalar_sfx": "scalar-suffix-val",
+		"data_scalar_cont_data": 12345,
+		"scalar_re_99": true,
+
 		"not_matching": "skip me"
 	}`)
+  // (adapted from test)
 
-	var result TestStruct
-	err := jsonpat.UnmarshalJson(jsonData, &result)
-	if err != nil {
-		log.Fatalf("Failed to unmarshal: %v", err)
-	}
+  var result TestStruct
+  err := jsonpat.Unmarshal(jsonData, &result) //
+  if err != nil {
+    log.Fatalf("Failed to unmarshal: %v", err)
+  }
 
-	// --- Known Fields ---
-	fmt.Printf("KnownField:     %s\n", result.KnownField)
-	fmt.Printf("OtherKnown:     %d\n", result.OtherKnown)
-	fmt.Printf("Ignored:        '%s' (should be empty)\n", result.Ignored)
+  // --- Known Fields ---
+  fmt.Printf("KnownField:     %s\n", result.KnownField)
+  fmt.Printf("OtherKnown:     %d\n", result.OtherKnown)
+  fmt.Printf("Ignored:        '%s' (should be empty)\n", result.Ignored)
 
-	// --- Embedded Known Field ---
-	fmt.Printf("EmbeddedField:  %s\n", result.EmbeddedField)
+  // --- Embedded Known Field ---
+  fmt.Printf("EmbeddedField:  %s\n", result.EmbeddedField)
 
-	// --- Dynamic Fields ---
-	fmt.Println("\n--- DynamicPrefix (dyn_,prefix) ---")
-	for k, v := range result.DynamicPrefix {
-		fmt.Printf("  %s: %d\n", k, v)
-	}
+  // --- Dynamic Map Fields ---
+  fmt.Println("\n--- DynamicPrefix (dyn_,prefix) ---")
+  for k, v := range result.DynamicPrefix {
+    fmt.Printf("  %s: %d\n", k, v)
+  }
 
-	fmt.Println("\n--- DynamicContains (_val_,contains) ---")
-	for k, v := range result.DynamicContains {
-		fmt.Printf("  %s: %f\n", k, v)
-	}
+  fmt.Println("\n--- DynamicContains (_val_,contains) ---")
+  for k, v := range result.DynamicContains {
+    fmt.Printf("  %s: %f\n", k, v)
+  }
 
-	fmt.Println("\n--- DynamicSuffix (_suffix,suffix) ---")
-	for k, v := range result.DynamicSuffix {
-		fmt.Printf("  %s: %v\n", k, v)
-	}
+  fmt.Println("\n--- DynamicSuffix (_suffix,suffix) ---")
+  for k, v := range result.DynamicSuffix {
+    fmt.Printf("  %s: %v\n", k, v)
+  }
+
+  fmt.Println("\n--- DynamicRegex (^re_.*$,regex) ---")
+  for k, v := range result.DynamicRegex {
+    fmt.Printf("  %s: %s\n", k, v)
+  }
+
+  // --- Dynamic Scalar Fields ---
+  fmt.Println("\n--- Dynamic Scalar Fields (First Match Wins) ---")
+  fmt.Printf("ScalarPrefix:   %s\n", result.ScalarPrefix)
+  fmt.Printf("ScalarSuffix:   %s\n", result.ScalarSuffix)
+  fmt.Printf("ScalarContains: %d\n", result.ScalarContains)
+  fmt.Printf("ScalarRegex:    %t\n", result.ScalarRegex)
 }
 ```
 
@@ -137,4 +175,14 @@ EmbeddedField:  i am embedded
 --- DynamicSuffix (_suffix,suffix) ---
   some_suffix: test string
   another_suffix: true
+
+--- DynamicRegex (^re_.*$,regex) ---
+  re_a123: regex-A
+  re_b456: regex-B
+
+--- Dynamic Scalar Fields (First Match Wins) ---
+ScalarPrefix:   scalar-prefix-val
+ScalarSuffix:   scalar-suffix-val
+ScalarContains: 12345
+ScalarRegex:    true
 ```
