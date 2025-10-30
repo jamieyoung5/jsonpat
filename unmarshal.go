@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 )
 
-// UnmarshalJson parses json data into a struct, supporting `jsonpat` tags
+// Unmarshal parses json data into a struct, supporting `jsonpat` tags
 // while preserving existing `json` tagging functionality. Dynamic json tags allow
 // for filtered matching of json keys into a struct field.
 //
 // The 'v' argument must be a non-nil pointer to a struct.
-func UnmarshalJson(data []byte, v interface{}) error {
+func Unmarshal(data []byte, v interface{}) error {
 	// validata struct pointer
 	ptrVal := reflect.ValueOf(v)
 	if ptrVal.Kind() != reflect.Ptr || ptrVal.IsNil() {
@@ -36,7 +35,8 @@ func UnmarshalJson(data []byte, v interface{}) error {
 		return fmt.Errorf("failed to unmarshal raw json: %w", err)
 	}
 
-	dynamicMaps := buildDynamicMaps(info.tagging.dynamicFields, structVal)
+	dynamicMaps := buildDynamicMaps(info.tagging.dynamicMapFields, structVal)
+	dynamicScalarSet := make(map[string]bool)
 
 	for key, rawValue := range raw {
 		if fieldIndices, ok := info.tagging.knownFields[key]; ok {
@@ -48,18 +48,30 @@ func UnmarshalJson(data []byte, v interface{}) error {
 			continue
 		}
 
-		for _, dynInfo := range info.tagging.dynamicFields {
-			matches := false
-			switch dynInfo.loadType {
-			case "prefix":
-				matches = strings.HasPrefix(key, dynInfo.value)
-			case "contains":
-				matches = strings.Contains(key, dynInfo.value)
-			case "suffix":
-				matches = strings.HasSuffix(key, dynInfo.value)
+		scalarHandled := false
+		for _, dynInfo := range info.tagging.dynamicScalarFields {
+			pathKey := fmt.Sprint(dynInfo.fieldIndices)
+			if dynamicScalarSet[pathKey] {
+				continue
 			}
 
-			if matches {
+			if match(key, dynInfo) {
+				field := structVal.FieldByIndex(dynInfo.fieldIndices)
+				if err = json.Unmarshal(rawValue, field.Addr().Interface()); err != nil {
+					return fmt.Errorf("failed to unmarshal dynamic scalar key %s: %w", key, err)
+				}
+				dynamicScalarSet[pathKey] = true
+				scalarHandled = true
+				break
+			}
+		}
+
+		if scalarHandled {
+			continue
+		}
+
+		for _, dynInfo := range info.tagging.dynamicMapFields {
+			if match(key, dynInfo) {
 				pathKey := fmt.Sprint(dynInfo.fieldIndices)
 				if err = unmarshalDynamic(
 					dynamicMaps[pathKey],
@@ -70,7 +82,6 @@ func UnmarshalJson(data []byte, v interface{}) error {
 				}
 			}
 		}
-
 	}
 
 	return nil
