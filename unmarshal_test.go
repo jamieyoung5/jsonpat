@@ -159,7 +159,7 @@ func TestUnmarshal_StandardStructOptimization(t *testing.T) {
 func TestUnmarshal_UnexportedFields(t *testing.T) {
 	type UnexportedStruct struct {
 		Public  string `json:"public"`
-		private string `jsonpat:"hid_,prefix"` // Should be ignored
+		private string `jsonpat:"hid_,prefix"` //nolint:unused // Should be ignored
 	}
 
 	jsonData := []byte(`{"public": "seen", "hid_val": "unseen"}`)
