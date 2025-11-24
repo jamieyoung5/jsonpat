@@ -1,6 +1,6 @@
 module github.com/jamieyoung5/jsonpat
 
-go 1.24
+go 1.21
 
 require github.com/stretchr/testify v1.11.1
 

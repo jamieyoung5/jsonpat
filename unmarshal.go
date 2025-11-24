@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 )
 
 // Unmarshal parses json data into a struct, supporting `jsonpat` tags
@@ -29,16 +30,30 @@ func Unmarshal(data []byte, v interface{}) error {
 		return fmt.Errorf("failed to analyze struct %s: %w", structType.Name(), err)
 	}
 
+	// no jsonpat fields, delegate completely to std lib
+	if len(info.tagging.dynamicMapFields) == 0 &&
+		len(info.tagging.dynamicScalarFields) == 0 {
+		return json.Unmarshal(data, v)
+	}
+
 	// parse all json data
 	var raw map[string]json.RawMessage
 	if err = json.Unmarshal(data, &raw); err != nil {
 		return fmt.Errorf("failed to unmarshal raw json: %w", err)
 	}
 
+	keys := make([]string, 0, len(raw))
+	for k := range raw {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+
 	dynamicMaps := buildDynamicMaps(info.tagging.dynamicMapFields, structVal)
 	dynamicScalarSet := make(map[string]bool)
 
-	for key, rawValue := range raw {
+	for _, key := range keys {
+		rawValue := raw[key]
+
 		if fieldIndices, ok := info.tagging.knownFields[key]; ok {
 			field := structVal.FieldByIndex(fieldIndices)
 
@@ -101,6 +116,10 @@ func unmarshalDynamic(dynMap reflect.Value, key string, jsonRaw json.RawMessage)
 }
 
 func buildDynamicMaps(dynFields []dynamicFieldInfo, structVal reflect.Value) map[string]reflect.Value {
+	if len(dynFields) == 0 {
+		return nil
+	}
+
 	dynamicMaps := make(map[string]reflect.Value)
 	for _, dynInfo := range dynFields {
 		fieldVal := structVal.FieldByIndex(dynInfo.fieldIndices)
