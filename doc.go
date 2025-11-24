@@ -68,6 +68,6 @@ Unmarshaling:
 	// data.DynamicByRegex["user_101"] == "u-1"
 	// data.DynamicByRegex["user_102"] == "u-2"
 	//
-	// data.FirstScalar == "first" (or "second", depending on map iteration order)
+	// data.FirstScalar == "second" (Deterministically selected because "another_val" sorts before "other_val")
 */
 package jsonpat

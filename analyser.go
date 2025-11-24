@@ -10,7 +10,7 @@ import (
 
 const (
 	jsonPatTag          = "jsonpat"
-	jsonPatTagSeperator = ","
+	jsonPatTagSeparator = ","
 )
 
 // structInfo holds cached reflection data for a struct.
@@ -78,7 +78,7 @@ func analyseFieldTag(field reflect.StructField, fieldIndex []int, info *structIn
 // analyseJsonPatTag parses and stores a jsonpat tags info
 func analyseJsonPatTag(field reflect.StructField, fieldIndex []int, value string, info *structInfo) error {
 
-	data := strings.Split(value, jsonPatTagSeperator)
+	data := strings.Split(value, jsonPatTagSeparator)
 	matcher, err := extractMatcher(data)
 	if err != nil {
 		return err

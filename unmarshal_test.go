@@ -164,3 +164,33 @@ func Test_getStructInfo_Cache(t *testing.T) {
 
 	assert.Same(t, info1, info2, "getStructInfo should return the same cached pointer")
 }
+
+func FuzzUnmarshal(f *testing.F) {
+	f.Add([]byte(`{
+		"known_field": "hello",
+		"other": 123,
+		"ignored": "should not be Loaded",
+		"embedded_field": "i am embedded",
+		"dyn_abc": 1,
+		"dyn_xyz": 2,
+		"field_val_1": 10.5,
+		"field_val_2": 20.75,
+		"some_suffix": "test",
+		"another_suffix": true,
+		"re_a123": "regex-A",
+		"re_b456": "regex-B",
+		"scalar_pfx_data": "scalar-prefix-val",
+		"data_scalar_sfx": "scalar-suffix-val",
+		"data_scalar_cont_data": 12345,
+		"scalar_re_99": true,
+		"not_matching": "skip me"
+	}`))
+	f.Add([]byte(`{}`))
+	f.Add([]byte(`{"broken":`))
+
+	f.Fuzz(func(t *testing.T, data []byte) {
+		var result TestStruct
+
+		_ = Unmarshal(data, &result)
+	})
+}

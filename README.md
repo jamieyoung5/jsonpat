@@ -1,4 +1,13 @@
-# jsonpat
+<div align="center">
+    <h1>jsonpat</h1>
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/jamieyoung5/jsonpat.svg)](https://pkg.go.dev/github.com/jamieyoung5/jsonpat)
+[![CI](https://github.com/jamieyoung5/jsonpat/actions/workflows/ci.yml/badge.svg)](https://github.com/jamieyoung5/jsonpat/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/jamieyoung5/jsonpat/graph/badge.svg)](https://codecov.io/gh/jamieyoung5/jsonpat)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jamieyoung5/jsonpat)](https://goreportcard.com/report/github.com/jamieyoung5/jsonpat)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
 
 `jsonpat` extends the standard `encoding/json` package to support unmarshaling JSON objects with dynamic keys into maps within a struct.
 
@@ -9,10 +18,10 @@ This is useful when you have a JSON payload where some fields are known, but oth
 - Unmarshal unknown fields into maps based on filters.
 - Supports both map fields (`map[string]T`) to capture all matching keys and scalar fields (e.g., `string`, `int`) to capture the first matching key.
 - Supports matching dynamic keys by:
-  - `prefix`
-  - `contains`
-  - `suffix`
-  - `regex`
+    - `prefix`
+    - `contains`
+    - `suffix`
+    - `regex`
 - Works alongside standard `json` tags and supports embedded structs
 
 ## Installation
@@ -28,10 +37,11 @@ Define your struct using both standard `json` tags and the `jsonpat` tag.
 The `jsonpat` tag format is:
 **`jsonpat:"<value>,<type>"`**
 
--   **`<value>`**: The string value to match (e.g, a prefix, a substring, suffix, or regex pattern).
--   **`<type>`**: The matching logic. Must be one of `prefix`, `contains`, `suffix`, or `regex`.
+- **`<value>`**: The string value to match (e.g, a prefix, a substring, suffix, or regex pattern).
+- **`<type>`**: The matching logic. Must be one of `prefix`, `contains`, `suffix`, or `regex`.
 
 ### Field Types
+
 - **Map Fields (`map[string]T`):** All JSON keys matching the rule will be unmarshaled into this map.
 
 - **Scalar Fields (e.g., `string`, `int`, `bool`):** The value of the first JSON key that matches the rule will be unmarshaled into this field. Subsequent matches for the same rule are ignored.
@@ -54,12 +64,12 @@ type TestStruct struct {
     KnownField string `json:"known_field"`
     OtherKnown int    `json:"other"`
     Ignored    string `json:"-"`
-    
+
     // Dynamic Map Fields (Collect all matches)
     DynamicPrefix   map[string]int     `jsonpat:"dyn_,prefix"`
     DynamicContains map[string]float64 `jsonpat:"_val_,contains"`
     DynamicRegex    map[string]string  `jsonpat:"^re_.*$,regex"`
-    
+
     // Dynamic Scalar Fields (Collect first match)
     ScalarPrefix   string `jsonpat:"scalar_pfx_,prefix"`
     ScalarSuffix   string `jsonpat:"_scalar_sfx,suffix"`
@@ -185,4 +195,19 @@ ScalarPrefix:   scalar-prefix-val
 ScalarSuffix:   scalar-suffix-val
 ScalarContains: 12345
 ScalarRegex:    true
+```
+
+## Benchmarks
+
+For dynamically matched fields, `jsonpat` does introduce slightly more overhead versus manually parsing into `map[string]interface{}`, however it handles the complexity of iteration, type assertion, and regex matching automatically, saving you from writing potentially brittle, boilerplate-heavy code.
+
+`jsonpat` incurs a negligible overhead (~2.7%) for standard struct fields compared to the standard library.
+
+**Results on Apple M4 Pro:**
+
+```text
+BenchmarkOverhead_JsonPat-12          2821650        408.7 ns/op       248 B/op        6 allocs/op
+BenchmarkOverhead_StdLib-12           3000922        397.9 ns/op       248 B/op        6 allocs/op
+BenchmarkDynamic_JsonPat-12            284892       4119 ns/op        4546 B/op      110 allocs/op
+BenchmarkDynamic_MapInterface-12       755284       1590 ns/op         552 B/op       47 allocs/op
 ```
