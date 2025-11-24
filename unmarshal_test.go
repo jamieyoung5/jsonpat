@@ -30,7 +30,7 @@ type TestStruct struct {
 	ScalarRegex    bool   `jsonpat:"^scalar_re_\\d+$,regex"`
 }
 
-func TestLoad(t *testing.T) {
+func TestUnmarhsal(t *testing.T) {
 	jsonData := []byte(`{
 		"known_field": "hello",
 		"other": 123,
@@ -98,7 +98,7 @@ func TestLoad(t *testing.T) {
 	assert.NotContains(t, result.DynamicRegex, "not_matching", "DynamicRegex should not contain 'not_matching'")
 }
 
-func TestLoad_ScalarFirstMatchWins(t *testing.T) {
+func TestUnmarshal_ScalarFirstMatchWins(t *testing.T) {
 	type ScalarStruct struct {
 		Scalar string `jsonpat:"pfx_,prefix"`
 	}
@@ -118,7 +118,7 @@ func TestLoad_ScalarFirstMatchWins(t *testing.T) {
 	assert.Contains(t, []string{"first", "second"}, result.Scalar, "Scalar field should be one of the matching values")
 }
 
-func TestLoad_Errors(t *testing.T) {
+func TestUnmarshal_Errors(t *testing.T) {
 	jsonData := []byte(`{}`)
 	var val TestStruct
 
@@ -139,6 +139,67 @@ func TestLoad_Errors(t *testing.T) {
 
 	badScalarTypeJson := []byte(`{ "scalar_re_99": "not-a-bool" }`)
 	assert.Error(t, Unmarshal(badScalarTypeJson, &val), "Expected error for dynamic scalar field type mismatch")
+}
+
+func TestUnmarshal_StandardStructOptimization(t *testing.T) {
+	type PlainStruct struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+
+	jsonData := []byte(`{"name": "test", "age": 30}`)
+	var result PlainStruct
+
+	err := Unmarshal(jsonData, &result)
+	require.NoError(t, err)
+	assert.Equal(t, "test", result.Name)
+	assert.Equal(t, 30, result.Age)
+}
+
+func TestUnmarshal_UnexportedFields(t *testing.T) {
+	type UnexportedStruct struct {
+		Public  string `json:"public"`
+		private string `jsonpat:"hid_,prefix"` //nolint:unused // Should be ignored
+	}
+
+	jsonData := []byte(`{"public": "seen", "hid_val": "unseen"}`)
+	var result UnexportedStruct
+
+	err := Unmarshal(jsonData, &result)
+	require.NoError(t, err)
+	assert.Equal(t, "seen", result.Public)
+}
+
+func TestUnmarshal_TagErrors_ExtraArgs(t *testing.T) {
+	typeCache = sync.Map{} // Clear cache to force re-analysis
+
+	type BadTagArgs struct {
+		M map[string]int `jsonpat:"val,prefix,extra"`
+	}
+
+	var result BadTagArgs
+	err := Unmarshal([]byte(`{}`), &result)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "must have a value and optional search type")
+}
+
+func TestUnmarshal_EmbeddedStructError(t *testing.T) {
+	typeCache = sync.Map{} // Clear cache to force re-analysis
+
+	type BadInner struct {
+		M map[string]int `jsonpat:"val,invalid_type"`
+	}
+
+	type Outer struct {
+		BadInner
+	}
+
+	var result Outer
+	err := Unmarshal([]byte(`{}`), &result)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to analyze struct")
+	assert.Contains(t, err.Error(), "invalid matcher")
 }
 
 func Test_getStructInfo_TagErrors(t *testing.T) {
